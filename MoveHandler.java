@@ -2,7 +2,7 @@
 import java.util.List;
 
 public class MoveHandler {
-	private final ReversibleGameState gameState;
+	public final ReversibleGameState gameState;
 	public MoveHandler(ReversibleGameState gameState){
 		this.gameState = gameState;
 	}
@@ -12,9 +12,9 @@ public class MoveHandler {
 			if (piece == Tile.BLANK) continue;
 			int pieceColor = piece & Tile.COLOR;
 			if (pieceColor != gameState.player) continue;
-
 			addLegalMoves(originIndex, moves);
 		}
+		legalizeMoves(moves);
 	}
 	public void addLegalMoves(int originIndex, List<Move> moves){
 		byte piece = gameState.getTile(originIndex);
@@ -33,11 +33,14 @@ public class MoveHandler {
 			case Tile.QUEEN -> addLegalQueenMoves(originIndex, moves);
 			case Tile.KING -> addLegalKingMoves(originIndex, moves);
 		}
-		int kingIndex = (pieceColor == Tile.WHITE) ? gameState.whiteKingIndex : gameState.blackKingIndex;
-		//if (true) return;
+
+	}
+	public void legalizeMoves(List<Move> moves){
+		int kingIndex = (gameState.player == Tile.WHITE) ? gameState.whiteKingIndex : gameState.blackKingIndex;
+
 		for (int i = 0; i < moves.size(); i++){
 			ReversibleMove move = new ReversibleMove(moves.get(i), gameState);
-			//gameState.tryMoveLite(move);
+
 			byte origin = gameState.getTile(move.getOriginIndex());
 			byte target = gameState.getTile(move.getTargetIndex());
 
@@ -48,13 +51,12 @@ public class MoveHandler {
 			}
 			gameState.setTile(move.getOriginIndex(), Tile.BLANK);
 
-			int tkingIndex = (pieceType == Tile.KING) ? move.getTargetIndex() : kingIndex;
-			if (isAttacked(tkingIndex, pieceColor ^ Tile.COLOR)){
+			int tkingIndex = ((origin & Tile.PIECE) == Tile.KING) ? move.getTargetIndex() : kingIndex;
+			if (isAttacked(tkingIndex, gameState.player ^ Tile.COLOR)){
 				moves.remove(i);
 				i--;
 			}
 
-			//gamestate.untryMoveLite();
 			gameState.setTile(move.getOriginIndex(), origin);
 			if (move.getFlag() == Move.ENPASSANT){
 				int d = 8 - 2 * gameState.player; // works because white = 8, black = 0
@@ -284,7 +286,7 @@ public class MoveHandler {
 			}
 		}
 	}
-	private boolean isAttacked(int index, int byColor){
+	public boolean isAttacked(int index, int byColor){
 		// only intended to check for king, ignore en passant captures
 		byte targetTile;
 		int x = index & 0b111;
@@ -374,7 +376,7 @@ public class MoveHandler {
 			}
 		}
 		// pawn check
-		int dy = 1 + y - Tile.WHITE/4; // subtract 1 if white, add 1 if black
+		int dy = 1 + y - byColor/4; // subtract 1 if white, add 1 if black
 		if (dy >= 0 && dy < 8){
 			threat1 = (byte)(Tile.PAWN|byColor);
 			if (x < 7 && gameState.getTile(x+1, dy) == threat1){

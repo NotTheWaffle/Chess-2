@@ -1,4 +1,4 @@
-public interface Agent {
-	public Move findMove(GameState gameState);
-	public String name();
+public abstract class Agent {
+	public abstract Move findMove(GameState gameState);
+	public abstract String name();
 }

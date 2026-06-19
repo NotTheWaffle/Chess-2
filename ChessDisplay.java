@@ -20,6 +20,7 @@ public final class ChessDisplay extends Game{
 	private boolean grabbing = false;
 
 	// display stuff
+	private byte[] board;
 	private final List<Move> renderedMoves;
 	private int selectedIndex;
 	private Move lastMove;
@@ -34,8 +35,8 @@ public final class ChessDisplay extends Game{
 		super(288, 288);
 		sprites = new SpriteSet("Gambit", "Gambit");
 		this.match = match;
-		this.moveHandler = new MoveHandler((ReversibleGameState) match.gameState);
-		gameState = (ReversibleGameState) match.gameState;
+		this.moveHandler = match.moveHandler;
+		gameState = match.gameState;
 		this.selectedIndex = -1;
 
 		renderedMoves = new ArrayList<>();
@@ -61,6 +62,11 @@ public final class ChessDisplay extends Game{
 	public void tick(){}
 	@Override
 	public void onMouseDown(GamePanel panel){
+		if (input.mouseDown == Input.MOUSE_RIGHT){
+			gameState.untryMove();
+			return;
+		}
+		if (input.mouseDown != Input.MOUSE_LEFT) return;
 		if (chosenMove != null) return;
 		// when you click on a piece, it turns the tile yellow
 		// have previous moves shown as yellow tiles on the origin and target #baca44
@@ -99,7 +105,7 @@ public final class ChessDisplay extends Game{
 				index = tileY;
 			}
 			lastMove = promotions.get(index);
-			gameState.makeMove(lastMove);
+			chosenMove = lastMove;
 
 			renderedMoves.clear();
 			promoting = false;
@@ -129,6 +135,7 @@ public final class ChessDisplay extends Game{
 
 		renderedMoves.clear();
 		moveHandler.addLegalMoves(mouseIndex, renderedMoves);
+		moveHandler.legalizeMoves(renderedMoves);
 		render();
 	}
 	@Override
@@ -158,14 +165,11 @@ public final class ChessDisplay extends Game{
 		if (foundMoves.size() == 1){
 			chosenMove = foundMoves.get(0);
 			renderedMoves.clear();
-
 		} else if (foundMoves.size() == 4){
 			promoting = true;
 			promotions = foundMoves;
 			promotingColor = gameState.player;
 			renderedMoves.clear();
-		} else {
-			System.out.println("weird amount of moves "+foundMoves);
 		}
 
 		render();

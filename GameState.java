@@ -1,6 +1,8 @@
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 
@@ -11,7 +13,7 @@ public class GameState{
 	public byte castlingRights;	// 0b1111 qkQK black queen, black king, white queen, white king
 	public byte halfmoves;	//50 move stalemate (all), 0 to 50, byte is big enough
 	public short moves;		//useless technically - starts at 1, increments after blacks move
-	public long[] encounteredPositions = new long[0];	//repeated position stalemate TODO
+	public List<Long> encounteredPositions = new ArrayList<>();	//repeated position stalemate
 
 	// not neccessary, used for faster lookups
 	public transient byte whiteKingIndex;
@@ -33,6 +35,7 @@ public class GameState{
 		}
 		return result;
 	}
+
 	public long generateZobristHash(){
 		//TODO make this encorporate faster hashing by not rehashing the entire board
 		long hashCode = 0;
@@ -145,7 +148,7 @@ public class GameState{
 		this.blackKingIndex = gameState.blackKingIndex;
 		this.halfmoves = gameState.halfmoves;
 		this.moves = gameState.moves;
-		this.encounteredPositions = null; //TODO
+		this.encounteredPositions = new ArrayList<>(); this.encounteredPositions.addAll(gameState.encounteredPositions);
 	}
 
 	public void makeMove(Move move){
@@ -200,6 +203,7 @@ public class GameState{
 		setTile(move.getOriginIndex(), Tile.BLANK);
 		if (this.player == Tile.BLACK) this.moves++;
 		player ^= Tile.COLOR;
+		encounteredPositions.add(generateZobristHash());
 	}
 
 	protected final void setTile(int x, int y, int tile){
@@ -215,6 +219,43 @@ public class GameState{
 		return board[idx];
 	}
 
+	public static enum Conclusion{
+		WHITE,
+		BLACK,
+		TIE,
+		ONGOING
+	}
+	public Conclusion findWinner(){
+		if (this.halfmoves > 50){
+			return Conclusion.TIE;
+		}
+		long currentPosition = encounteredPositions.getLast();
+		int repetition = 0;
+		for (Long position : encounteredPositions){
+			if (position == currentPosition){
+				repetition++;
+			}
+		}
+		if (repetition >= 3){
+			return Conclusion.TIE;
+		}
+		List<Move> moves = new ArrayList<>();
+		MoveHandler moveHandler = new MoveHandler((ReversibleGameState) this);
+		moveHandler.addLegalMoves(moves);
+
+		if (moves.isEmpty()){
+		//	System.out.println("mate of some sort detected");
+			if (moveHandler.isAttacked(whiteKingIndex, Tile.BLACK)){
+				return Conclusion.BLACK;
+			} else if (moveHandler.isAttacked(blackKingIndex, Tile.WHITE)){
+				return Conclusion.WHITE;
+			} else {
+				return Conclusion.TIE;
+			}
+		}
+		return Conclusion.ONGOING;
+	}
+
 	@Override
 	public int hashCode(){
 		return (int) generateZobristHash();
@@ -228,18 +269,81 @@ public class GameState{
 			return false;
 		}
 	}
-	public String toFEN(){
-		//TODO
-		return "";
+	public String toAlgebraicMoveNotation(Move move){
+		//TODO doesn't include check(mate) or disambiguation
+		String suffix = "";
+		if (move.getFlag() == Move.CASTLING){
+			if (move.getTargetX() == 0){
+				return "O-O-O";
+			} else {
+				return "O-O";
+			}
+		} else if ((move.getFlag() & Move.PROMOTION) != 0){
+			suffix = switch (move.getFlag()){
+				case Move.PROMOTION_KNIGHT -> "=N";
+				case Move.PROMOTION_BISHOP -> "=B";
+				case Move.PROMOTION_ROOK -> "=R";
+				case Move.PROMOTION_QUEEN -> "=Q";
+				default -> "";
+			};
+		}
+		byte piece = getTile(move.getOriginIndex());
+		String moveString = switch (piece & Tile.PIECE){
+			case Tile.PAWN -> "";
+			case Tile.KNIGHT -> "N";
+			case Tile.KING -> "K";
+			case Tile.BISHOP -> "B";
+			case Tile.ROOK -> "R";
+			case Tile.QUEEN -> "Q";
+			default -> "";
+		};
+		String infix = "";
+		if (getTile(move.getTargetIndex()) != Tile.BLANK) infix = "x";
+		moveString += infix + ("abcedfgh".charAt(move.getTargetX())) + (move.getTargetY() + 1) + suffix;
+		return moveString;
 	}
+
 	@Override
 	public String toString(){
 		StringBuilder result = new StringBuilder();
-		String p = player == Tile.WHITE ? "White" : "Black";
-		result.append("Turn:"+p);
-		result.append("\nEn passant:"+enpassantIndex);
-		result.append("\nCastling:"+Integer.toBinaryString(castlingRights));
-		result.append("\n"+board.toString());
+		for (int i = 0; i < 64; i+=8){
+			int count = 0;
+			for (int j = 0; j < 8; j++){
+				if (board[i+j] == Tile.BLANK){
+					count++;
+				} else {
+					if (count > 0){
+						result.append(count);
+						count = 0;
+					}
+					result.append(Tile.PIECE_SYMBOLS[board[i+j]]);
+				}
+			}
+			if (count > 0){
+				result.append(count);
+			}
+			if (i != 56) result.append("/");
+		}
+		result
+			.append(' ')
+			.append(player == Tile.WHITE ? 'w' : 'b')
+			.append(' ');
+		if ((castlingRights & 0b1000) != 0) result.append('q');
+		if ((castlingRights & 0b0100) != 0) result.append('K');
+		if ((castlingRights & 0b0010) != 0) result.append('Q');
+		if ((castlingRights & 0b0001) != 0) result.append('K');
+		result.append(' ');
+		if (enpassantIndex == -1){
+			result.append('-');
+		} else {
+			result.append("abcdefgh".charAt(enpassantIndex%8))
+			.append((enpassantIndex/8 + 1));
+		}
+		result
+			.append(' ')
+			.append(halfmoves)
+			.append(' ')
+			.append(moves);
 		return result.toString();
 	}
 }

@@ -16,7 +16,7 @@ public class ReversibleMove extends Move{
 		this(move, gameState.getTile(move.getTargetIndex()), gameState.halfmoves, gameState.enpassantIndex, gameState.castlingRights);
 	}
 	public ReversibleMove(Move move, byte tileContents, byte halfmoves, byte enpassantIndex, byte castlingRights){
-		super(move.data | tileContents << 16 | enpassantIndex << 20 | halfmoves << 26 | castlingRights << 28);
+		super(move.data | (tileContents & 0b111) << 15 | (enpassantIndex == -1 ? 0b1000 : (enpassantIndex & 0b111)) << 24 | (halfmoves & 0b111111) << 18 | (castlingRights & 0b1111) << 28);
 	}
 
 	public int getTargetPiece(){

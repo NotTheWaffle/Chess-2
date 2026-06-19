@@ -2,7 +2,7 @@
 
 public class Main{
 	public static void main(String[] args){
-		ChessMatch match = new ChessMatch(new HumanAgent(), new HumanAgent());
+		ChessMatch match = new ChessMatch(new HumanAgent(), new AIAgent(3));
 
 		ChessDisplay game = new ChessDisplay(match);
 

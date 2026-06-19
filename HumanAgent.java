@@ -1,4 +1,4 @@
-public class HumanAgent implements Agent{
+public class HumanAgent extends Agent{
 	public ChessDisplay display;
 	@Override
 	public Move findMove(GameState gameState){

@@ -3,10 +3,8 @@ import java.util.List;
 
 public class ReversibleGameState extends GameState{
 	protected final List<ReversibleMove> moveHistory;
-	protected ReversibleMove liteMoveHistory;
 	public ReversibleGameState(){
 		this.moveHistory = new ArrayList<>();
-		this.liteMoveHistory = null;
 		super();
 	}
 	public void syncTree(){
@@ -20,8 +18,14 @@ public class ReversibleGameState extends GameState{
 
 
 	public void tryMove(Move move){
-		moveHistory.add(new ReversibleMove(move, this));
-		super.makeMove(move);
+		ReversibleMove reversibleMove;
+		if (move instanceof ReversibleMove reversibleMove1){
+			reversibleMove = reversibleMove1;
+		} else {
+			reversibleMove = new ReversibleMove(move, this);
+		}
+		moveHistory.add(reversibleMove);
+		super.makeMove(reversibleMove);
 	}
 	public void untryMove(){
 		ReversibleMove move = moveHistory.removeLast();
@@ -47,13 +51,22 @@ public class ReversibleGameState extends GameState{
 				setTile(move.getOriginIndex(), Tile.PAWN|player);
 			} // double moves work by default
 		}
-		enpassantIndex = (byte) move.getEnpassantIndex();
-		setTile(move.getTargetIndex(), move.getTargetPiece());
+		int enpassant = move.getEnpassantIndex();
+		if (enpassant >= 8){
+			enpassantIndex = -1;
+		} else {
+			enpassantIndex = (byte) (enpassant + 40 - 3 * (this.player ^ Tile.COLOR));
+		}
+		if (move.getTargetPiece() != Tile.BLANK)
+			setTile(move.getTargetIndex(), move.getTargetPiece() | (this.player ^ Tile.COLOR));
+		else
+			setTile(move.getTargetIndex(), Tile.BLANK);
 
 		if (move.getTargetIndex() == whiteKingIndex) whiteKingIndex = (byte) move.getOriginIndex();
 		if (move.getTargetIndex() == blackKingIndex) blackKingIndex = (byte) move.getOriginIndex();
 
 		halfmoves = (byte) move.getHalfmoves();
 		castlingRights = (byte) move.getCastlingRights();
+		encounteredPositions.removeLast();
 	}
 }
