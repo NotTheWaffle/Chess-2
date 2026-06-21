@@ -33,6 +33,7 @@ public class ReversibleGameState extends GameState{
 		super.makeMove(reversibleMove);
 	}
 	public void untryMove(){
+		super.hash = -1;
 		ReversibleMove move = moveHistory.removeLast();
 		this.player ^= Tile.COLOR;
 		if (this.player == Tile.BLACK){
@@ -72,6 +73,6 @@ public class ReversibleGameState extends GameState{
 
 		halfmoves = (byte) move.getHalfmoves();
 		castlingRights = (byte) move.getCastlingRights();
-		encounteredPositions.removeLast();
+		encounteredPositionCount--;
 	}
 }

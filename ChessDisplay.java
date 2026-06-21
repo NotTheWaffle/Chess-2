@@ -20,7 +20,7 @@ public final class ChessDisplay extends Game{
 	private boolean grabbing = false;
 
 	// display stuff
-	private byte[] board;
+	private final boolean rotate;
 	private final List<Move> renderedMoves;
 	private int selectedIndex;
 	private Move lastMove;
@@ -31,7 +31,7 @@ public final class ChessDisplay extends Game{
 	private byte promotingColor;
 	private List<Move> promotions;
 
-	public ChessDisplay(ChessMatch match){
+	public ChessDisplay(ChessMatch match, boolean rotate){
 		super(288, 288);
 		sprites = new SpriteSet("Gambit", "Gambit");
 		this.match = match;
@@ -49,6 +49,7 @@ public final class ChessDisplay extends Game{
 		playerBlack = match.agentBlack;
 		match.agentWhite.display = this;
 		match.agentBlack.display = this;
+		this.rotate = rotate;
 	}
 	@Override
 	public void tick(){}
@@ -210,16 +211,22 @@ public final class ChessDisplay extends Game{
 		// calls updateframe somewhere down the line
 	}
 	public int transformX(int tileX){
+		if (rotate) tileX = 7-tileX;
 		return tileX*36+2;
 	}
 	public int transformY(int tileY){
+		if (rotate) tileY = 7-tileY;
 		return (7-tileY)*36+2;
 	}
 	public int inverseTransformX(int x){
-		return x/36;
+		int u = x/36;
+		if (rotate) u = 7-u;
+		return u;
 	}
 	public int inverseTransformY(int y){
-		return 7-y/36;
+		int u = 7-y/36;
+		if (rotate) u = 7-u;
+		return u;
 	}
 
 	@Override

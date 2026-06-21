@@ -36,7 +36,7 @@ public final class ChessMatch{
 				winner = 4;
 				break;
 			}
-			long currentPosition = gameState.encounteredPositions.getLast();
+			long currentPosition = gameState.getHash();
 			int repetition = 0;
 			for (Long position : gameState.encounteredPositions){
 				if (position == currentPosition){

@@ -1,13 +1,17 @@
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class AIAgent extends Agent {
 	public final int depth;
 	private int prevEval = 0;
+	private final Map<Long, Transposition> transpositionTable;
+
 	public AIAgent(int depth){
 		this.depth = depth;
+		this.transpositionTable = new HashMap<>();
 	}
 	@Override
 	public Move findMove(GameState rawGameState, ChessMatch match){
@@ -15,7 +19,7 @@ public class AIAgent extends Agent {
 		MoveHandler moveHandler = new MoveHandler(gameState);
 		List<Move> moves = new ArrayList<>();
 		moveHandler.addMoves(moves);
-		int best = Integer.MIN_VALUE;
+		int best = -2_000_000;
 		Move bestMove = null;
 		int eval = deepEvaluate(moveHandler, depth);
 		String change = (eval > prevEval ? "+" : "") + (eval-prevEval);
@@ -32,10 +36,12 @@ public class AIAgent extends Agent {
 		change = (best > prevEval ? "+" : "") + (best-prevEval);
 		System.out.println("Choosing "+gameState.toAlgebraicMoveNotation(bestMove)+" : "+best+" ("+change+")");
 		prevEval = best;
+		System.out.println(transpositionTable.size());
 		return bestMove;
 	}
+
 	public int quiescentEvaluate(MoveHandler moveHandler){
-		return quiescentEvaluate(moveHandler, -1_000_000_000, 1_000_000_000);
+		return quiescentEvaluate(moveHandler, -10_000_000, 10_000_000);
 	}
 	public int quiescentEvaluate(MoveHandler moveHandler, int alpha, int beta){
 		List<Move> captures = new ArrayList<>();
@@ -46,7 +52,7 @@ public class AIAgent extends Agent {
 		if (alpha >= beta) return best;
 
 
-
+		//TODO sort these
 		for (Move move : captures){
 			moveHandler.gameState.tryMove(move);
 			int evaluation = -quiescentEvaluate(moveHandler, -beta, -alpha);
@@ -67,28 +73,39 @@ public class AIAgent extends Agent {
 		return best;
 	}
 	public int deepEvaluate(MoveHandler moveHandler, int depth){
-		return deepEvaluate(moveHandler, depth, -1_000_000_000, 1_000_000_000);
+		return deepEvaluate(moveHandler, depth, -10_000_000, 10_000_000);
 	}
 	public int deepEvaluate(final MoveHandler moveHandler, int depth, int alpha, int beta){
+		long hash = moveHandler.gameState.getHash();
+		if (transpositionTable.containsKey(hash)){
+			Transposition item = transpositionTable.get(hash);
+			if (item.depth >= depth) return item.eval;
+		}
 		if (depth == 0) return naiveEvaluate(moveHandler.gameState);
 		//if (depth == 0) return quiescentEvaluate(moveHandler);
 		List<Move> moves = new ArrayList<>();
 		moveHandler.addMoves(moves);
 		if (moves.isEmpty()) return naiveEvaluate(moveHandler.gameState);
 
-		int best = Integer.MIN_VALUE;
-		Comparator<Move> moveComparator = (Move move1, Move move2) -> {
-			moveHandler.gameState.tryMove(move1);
-			int eval1 = naiveEvaluate(moveHandler.gameState);
-			moveHandler.gameState.untryMove();
-			moveHandler.gameState.tryMove(move2);
-			int eval2 = naiveEvaluate(moveHandler.gameState);
-			moveHandler.gameState.untryMove();
-			return eval1-eval2;
-		};
+		int best = -2_000_000; // best move starts as getting checkmated twice
 
-		if (depth > 1) Collections.sort(moves, moveComparator);
-		for (Move move : moves){
+		// incredibly cursed nonsense generates a list of indicies into moves ordered by the evaluation of them
+		int[] indicies = new int[moves.size()];
+		for (int i = 0; i < indicies.length; i++){
+			moveHandler.gameState.tryMove(moves.get(i));
+			// this naiveEval is giving the opps eval, meaning lower = better. this is good because lower = lower idx when sorted
+			int eval = naiveEvaluate(moveHandler.gameState) + 1_000_000; // makes me happy
+			moveHandler.gameState.untryMove();
+			indicies[i] = (eval << 8) | i ;
+		}
+		Arrays.sort(indicies);
+		for (int i = 0; i < indicies.length; i++){
+			indicies[i] = indicies[i] & 0xff;
+		}
+
+
+		for (int i = 0; i < indicies.length; i++){
+			Move move = moves.get(indicies[i]);
 			moveHandler.gameState.tryMove(move);
 			int evaluation = -deepEvaluate(moveHandler, depth-1, -beta, -alpha);
 			moveHandler.gameState.untryMove();
@@ -104,6 +121,8 @@ public class AIAgent extends Agent {
 		if (best < -100_000){
 			best += 1; // make later losing mates better
 		}
+		// we know that our depth is > than the depth in the table already because if it wasn't we would've skipped out on this method really early on
+		transpositionTable.put(hash, new Transposition(hash, best, depth));
 		return best;
 	}
 	public int naiveEvaluate(GameState gameState){
@@ -166,4 +185,33 @@ public class AIAgent extends Agent {
 		0,  100,  500,  320,  330,  900,  0,  0,
 		-0, -100, -500, -320, -330, -900, -0, -0
 	};
+	private static class Transposition{
+		public final int depth;
+		public final long hash;
+		public int eval;
+		public Transposition(long hash, int eval, int depth){
+			this.hash = hash;
+			this.eval = eval;
+			this.depth = depth;
+		}
+		public Transposition(GameState gameState, int eval, int depth){
+			this(gameState.regenerateZobristHash(), eval, depth);
+		}
+		@Override
+		public int hashCode(){
+			return (int) hash;
+		}
+		@Override
+		public boolean equals(Object o){
+			if (o == this) return true;
+			if (o instanceof AIAgent.Transposition t){
+				return t.hash == hash;
+			}
+			return false;
+		}
+		@Override
+		public String toString(){
+			return Long.toHexString(hash)+":"+eval+"("+depth+")";
+		}
+	}
 }

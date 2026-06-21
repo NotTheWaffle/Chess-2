@@ -130,7 +130,7 @@ public class MoveHandler {
 		}
 	}
 
-	private void addPawnMoves(int index, List<Move> moves){
+	public void addPawnMoves(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
 		int x = index & 0b111;
@@ -188,7 +188,7 @@ public class MoveHandler {
 			}
 		}
 	}
-	private void addKnightMoves(int index, List<Move> moves){
+	public void addKnightMoves(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
 		int x = index & 0b111;
@@ -216,7 +216,7 @@ public class MoveHandler {
 			}
 		}
 	}
-	private void addBishopMoves(int index, List<Move> moves){
+	public void addBishopMoves(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
 		int x = index & 0b111;
@@ -262,7 +262,7 @@ public class MoveHandler {
 			break;
 		}
 	}
-	private void addRookMoves(int index, List<Move> moves){
+	public void addRookMoves(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
 		int x = index & 0b111;
@@ -308,11 +308,11 @@ public class MoveHandler {
 			break;
 		}
 	}
-	private void addQueenMoves(int index, List<Move> moves){
+	public void addQueenMoves(int index, List<Move> moves){
 		addRookMoves(index, moves);
 		addBishopMoves(index, moves);
 	}
-	private void addKingMoves(int index, List<Move> moves){
+	public void addKingMoves(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
 		int x = index & 0b111;
@@ -496,7 +496,7 @@ public class MoveHandler {
 		return false;
 	}
 
-	private void addPawnCaptures(int index, List<Move> moves){
+	public void addPawnCaptures(int index, List<Move> moves){
 		int color = gameState.getTile(index) & Tile.COLOR;
 		int x = index & 0b111;
 		int y = index >> 3;
@@ -522,7 +522,7 @@ public class MoveHandler {
 			}
 		}
 	}
-	private void addKnightCaptures(int index, List<Move> moves){
+	public void addKnightCaptures(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
 		int x = index & 0b111;
@@ -550,7 +550,7 @@ public class MoveHandler {
 			}
 		}
 	}
-	private void addBishopCaptures(int index, List<Move> moves){
+	public void addBishopCaptures(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
 		int x = index & 0b111;
@@ -584,7 +584,7 @@ public class MoveHandler {
 			break;
 		}
 	}
-	private void addRookCaptures(int index, List<Move> moves){
+	public void addRookCaptures(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
 		int x = index & 0b111;
@@ -618,11 +618,11 @@ public class MoveHandler {
 			break;
 		}
 	}
-	private void addQueenCaptures(int index, List<Move> moves){
+	public void addQueenCaptures(int index, List<Move> moves){
 		addBishopCaptures(index, moves);
 		addRookCaptures(index, moves);
 	}
-	private void addKingCaptures(int index, List<Move> moves){
+	public void addKingCaptures(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
 		int x = index & 0b111;
@@ -657,7 +657,7 @@ public class MoveHandler {
 		gameState.setTile(x2, y2, target);
 		return legal;
 	}
-	private boolean pawnMoveExists(int index){
+	public boolean pawnMoveExists(int index){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
 		byte opColor = (byte) (color ^ Tile.COLOR);
@@ -696,7 +696,7 @@ public class MoveHandler {
 		}
 		return false;
 	}
-	private boolean knightMoveExists(int index){
+	public boolean knightMoveExists(int index){
 		byte color = (byte) (gameState.getTile(index) & Tile.COLOR);
 		byte opColor = (byte) (color ^ Tile.COLOR);
 		int x = index & 0b111;
@@ -736,7 +736,7 @@ public class MoveHandler {
 		}
 		return false;
 	}
-	private boolean bishopMoveExists(int index){
+	public boolean bishopMoveExists(int index){
 		int color = gameState.getTile(index) & Tile.COLOR;
 		byte opColor = (byte) (color ^ Tile.COLOR);
 		int x = index & 0b111;
@@ -763,7 +763,7 @@ public class MoveHandler {
 		}
 		return false;
 	}
-	private boolean rookMoveExists(int index){
+	public boolean rookMoveExists(int index){
 		int color = gameState.getTile(index) & Tile.COLOR;
 		byte opColor = (byte) (color ^ Tile.COLOR);
 		int x = index & 0b111;
@@ -790,11 +790,11 @@ public class MoveHandler {
 		}
 		return false;
 	}
-	private boolean queenMoveExists(int index){
+	public boolean queenMoveExists(int index){
 		if (rookMoveExists(index)) return true;
 		return bishopMoveExists(index);
 	}
-	private boolean kingMoveExists(int index){
+	public boolean kingMoveExists(int index){
 		byte color = (byte) (gameState.getTile(index) & Tile.COLOR);
 		byte opColor = (byte) (color ^ Tile.COLOR);
 		int x = index & 0b111;

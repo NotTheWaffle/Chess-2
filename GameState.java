@@ -1,9 +1,7 @@
 
 import java.security.InvalidParameterException;
 import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Random;
 
 
@@ -14,11 +12,15 @@ public class GameState{
 	public byte castlingRights;	// 0b1111 qkQK black queen, black king, white queen, white king
 	public byte halfmoves;	//50 move stalemate (all), 0 to 50, byte is big enough
 	public short moves;		//useless technically - starts at 1, increments after blacks move
-	public List<Long> encounteredPositions = new ArrayList<>();	//repeated position stalemate
+	public long[] encounteredPositions; //repeated position stalemate
+	public int encounteredPositionCount = 0;
+	public long hash;
+
 
 	// not neccessary, used for faster lookups
 	public transient byte whiteKingIndex;
 	public transient byte blackKingIndex;
+	public transient int eval;
 
 	private static final long[] ZOBRIST_HASHING_RANDOMS = generateZobristHashingRandoms();
 	private static long[] generateZobristHashingRandoms(){
@@ -32,12 +34,19 @@ public class GameState{
 				if (result[i] == result[j]){
 					System.out.println(i+" equals "+j+" (very bad)");
 				}
+				if ((int) result[i] == (int) result[j]){
+					System.out.println(i+" is close enoguh to "+j+"(still pretty bad");
+				}
 			}
 		}
+		System.out.println("valid hashing values");
 		return result;
 	}
-
-	public long generateZobristHash(){
+	public long getHash(){
+		if (hash == -1) hash = regenerateZobristHash();
+		return hash;
+	}
+	protected long regenerateZobristHash(){
 		//TODO make this encorporate faster hashing by not rehashing the entire board
 		long hashCode = 0;
 		for (int i = 0; i < 64; i++){
@@ -50,8 +59,7 @@ public class GameState{
 				hashCode ^= ZOBRIST_HASHING_RANDOMS[lookupIndex];
 			}
 		}
-		// OK so there is TECHNICALLY a bug here where the en passant index only should be recorded in the hash if its meaningful, well... maybe??
-		hashCode ^= ZOBRIST_HASHING_RANDOMS[enpassantIndex+12*64];
+		if (enpassantIndex != -1) hashCode ^= ZOBRIST_HASHING_RANDOMS[enpassantIndex+12*64];
 		if (player == Tile.WHITE){
 			hashCode ^= ZOBRIST_HASHING_RANDOMS[13*64];
 		}
@@ -139,9 +147,12 @@ public class GameState{
 				whiteKingIndex = i;
 			}
 		}
+		this.hash = -1;
+		this.encounteredPositions = new long[300];
 	}
 	public GameState(GameState gameState){
-		this.board = Arrays.copyOf(gameState.board, 64);
+		this.board = new byte[64];
+		System.arraycopy(gameState.board, 0, this.board, 0, 64);
 		this.player = gameState.player;
 		this.enpassantIndex = gameState.enpassantIndex;
 		this.castlingRights = gameState.castlingRights;
@@ -149,11 +160,14 @@ public class GameState{
 		this.blackKingIndex = gameState.blackKingIndex;
 		this.halfmoves = gameState.halfmoves;
 		this.moves = gameState.moves;
-		this.encounteredPositions = new ArrayList<>(); this.encounteredPositions.addAll(gameState.encounteredPositions);
+		this.encounteredPositions = new long[300];
+		System.arraycopy(gameState.encounteredPositions, 0, this.encounteredPositions, 0, 300);
+		this.hash = -1;
 	}
 
 	public void makeMove(Move move){
 		if (move == null) throw new InvalidParameterException("Move must not be null");
+		this.hash = -1; // invalid the hash cache
 		this.halfmoves++;
 		// its assumed the move is legal, checking would take too long
 		if (move.getOriginIndex() == 0 || move.getTargetIndex() == 0) castlingRights &= 0b1101;		//white queenside rook
@@ -205,13 +219,16 @@ public class GameState{
 		setTile(move.getOriginIndex(), Tile.BLANK);
 		if (this.player == Tile.BLACK) this.moves++;
 		player ^= Tile.COLOR;
-		encounteredPositions.add(generateZobristHash());
+		encounteredPositions[encounteredPositionCount++] = getHash();
+	}
+	public long currentPosition(){
+		return encounteredPositions[encounteredPositionCount-1];
 	}
 
-	protected final void setTile(int x, int y, int tile){
+	protected final void setTile(int x, int y, int tile){ //like the hash should be invalidated here but thatd be way too slow
 		board[x|(y<<3)] = (byte) tile;
 	}
-	protected final void setTile(int idx, int tile){
+	protected final void setTile(int idx, int tile){ //like the hash should be invalidated here but thatd be way too slow
 		board[idx] = (byte) tile;
 	}
 	public final byte getTile(int x, int y){
@@ -231,11 +248,11 @@ public class GameState{
 		if (this.halfmoves > 50){
 			return Conclusion.TIE;
 		}
-		long currentPosition = encounteredPositions.getLast();
+		long currentPosition = getHash();
 		int repetition = 0;
-		for (Long position : encounteredPositions){
-			if (position == currentPosition){
-				repetition++;
+		for (int i = 0; i < encounteredPositionCount; i++){
+			if (encounteredPositions[i] == currentPosition){
+				if (++repetition >= 3) return Conclusion.TIE;
 			}
 		}
 		if (repetition >= 3){
@@ -257,7 +274,7 @@ public class GameState{
 
 	@Override
 	public int hashCode(){
-		return (int) generateZobristHash();
+		return (int) getHash();
 	}
 	@Override
 	public boolean equals(Object o){
