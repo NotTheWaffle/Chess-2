@@ -1,7 +1,6 @@
 public class HumanAgent extends Agent{
-	public ChessDisplay display;
 	@Override
-	public Move findMove(GameState gameState){
+	public Move findMove(GameState gameState, ChessMatch match){
 		return display.findMove();
 	}
 	@Override

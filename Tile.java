@@ -34,11 +34,4 @@ public final class Tile {
 
 
 	private Tile(){}
-
-	public static byte piece(byte tile){
-		return (byte) (tile & PIECE);
-	}
-	public static byte color(byte tile){
-		return (byte) (tile & COLOR);
-	}
 }

@@ -36,7 +36,7 @@ public final class ChessDisplay extends Game{
 		sprites = new SpriteSet("Gambit", "Gambit");
 		this.match = match;
 		this.moveHandler = match.moveHandler;
-		gameState = match.gameState;
+		gameState = new ReversibleGameState(match.gameState);
 		this.selectedIndex = -1;
 
 		renderedMoves = new ArrayList<>();
@@ -45,32 +45,20 @@ public final class ChessDisplay extends Game{
 		promotions = new ArrayList<>();
 		lastMove = null;
 
-		if (match.agentWhite instanceof HumanAgent){
-			playerWhite = match.agentWhite;
-			((HumanAgent) playerWhite).display = this;
-		} else {
-			playerWhite = null;
-		}
-		if (match.agentBlack instanceof HumanAgent){
-			playerBlack = match.agentBlack;
-			((HumanAgent) playerBlack).display = this;
-		} else {
-			playerBlack = null;
-		}
+		playerWhite = match.agentWhite;
+		playerBlack = match.agentBlack;
+		match.agentWhite.display = this;
+		match.agentBlack.display = this;
 	}
 	@Override
 	public void tick(){}
 	@Override
 	public void onMouseDown(GamePanel panel){
 		if (input.mouseDown == Input.MOUSE_RIGHT){
-			gameState.untryMove();
 			return;
 		}
 		if (input.mouseDown != Input.MOUSE_LEFT) return;
 		if (chosenMove != null) return;
-		// when you click on a piece, it turns the tile yellow
-		// have previous moves shown as yellow tiles on the origin and target #baca44
-		// click and drag pieces would be cool... but hard
 		// de-select a piece when you mousedown on a different index OR when you click on it again and let go in its position
 		int tileX = inverseTransformX(input.mouseX);
 		int tileY = inverseTransformY(input.mouseY);
@@ -134,7 +122,7 @@ public final class ChessDisplay extends Game{
 		}
 
 		renderedMoves.clear();
-		moveHandler.addLegalMoves(mouseIndex, renderedMoves);
+		moveHandler.addMoves(mouseIndex, renderedMoves);
 		moveHandler.legalizeMoves(renderedMoves);
 		render();
 	}
@@ -197,13 +185,13 @@ public final class ChessDisplay extends Game{
 	}
 	public Move findMove(){
 		lastMove = match.lastMove;
-		render();
 
 		while (chosenMove == null){
 			// fast and slow enough to not cause performance issues but also not cause input lag
 			try {
 				Thread.sleep(25);
 			} catch (InterruptedException e) {
+				System.out.println("Human response interrupted");
 				e.printStackTrace();
 			}
 		}
@@ -211,8 +199,11 @@ public final class ChessDisplay extends Game{
 		// preempt the move so that the display can show it
 		lastMove = chosenMove;
 		chosenMove = null;
-		render();
 		return lastMove;
+	}
+	public void update(ChessMatch match){
+		gameState.makeMove(match.lastMove);
+		render();
 	}
 	public void render(){
 		window.render();

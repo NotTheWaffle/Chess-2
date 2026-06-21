@@ -1,4 +1,5 @@
 
+import java.security.InvalidParameterException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,7 +42,7 @@ public class GameState{
 		long hashCode = 0;
 		for (int i = 0; i < 64; i++){
 			byte tile = getTile(i);
-			if (Tile.piece(tile) != Tile.BLANK){
+			if (tile != Tile.BLANK){
 				int lookupIndex =
 					((tile&Tile.PIECE)-1)
 					+ 6 * ((tile&Tile.COLOR)>>>3)
@@ -152,6 +153,7 @@ public class GameState{
 	}
 
 	public void makeMove(Move move){
+		if (move == null) throw new InvalidParameterException("Move must not be null");
 		this.halfmoves++;
 		// its assumed the move is legal, checking would take too long
 		if (move.getOriginIndex() == 0 || move.getTargetIndex() == 0) castlingRights &= 0b1101;		//white queenside rook
@@ -162,9 +164,9 @@ public class GameState{
 		if (move.getOriginIndex() == 60 || move.getTargetIndex() == 60) castlingRights &= 0b0011;	//black king
 		if (move.getOriginIndex() == 63 || move.getTargetIndex() == 63) castlingRights &= 0b1011;	//black kingside rook
 
-		if ((getTile(move.getTargetIndex()) & Tile.PIECE) != Tile.BLANK) // reset halfmoves on capture, technically this doesn't count en passant, but the next check gets it any way
+		if (getTile(move.getTargetIndex()) != Tile.BLANK) // reset halfmoves on capture, technically this doesn't count en passant, but the next check gets it any way
 			this.halfmoves = 0;
-		if ((getTile(move.getOriginIndex()) & Tile.PIECE) == Tile.PAWN) // reset halfmoves on pawn moves
+		if (getTile(move.getOriginIndex()) == Tile.PAWN) // reset halfmoves on pawn moves
 			this.halfmoves = 0;
 		// update king position
 		if (move.getOriginIndex() == whiteKingIndex) whiteKingIndex = (byte) move.getTargetIndex();
@@ -239,12 +241,9 @@ public class GameState{
 		if (repetition >= 3){
 			return Conclusion.TIE;
 		}
-		List<Move> moves = new ArrayList<>();
 		MoveHandler moveHandler = new MoveHandler((ReversibleGameState) this);
-		moveHandler.addLegalMoves(moves);
 
-		if (moves.isEmpty()){
-		//	System.out.println("mate of some sort detected");
+		if (!moveHandler.moveExists()){
 			if (moveHandler.isAttacked(whiteKingIndex, Tile.BLACK)){
 				return Conclusion.BLACK;
 			} else if (moveHandler.isAttacked(blackKingIndex, Tile.WHITE)){

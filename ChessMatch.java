@@ -5,6 +5,7 @@ public final class ChessMatch{
 	public final MoveHandler moveHandler;
 	public final ReversibleGameState gameState;
 	public Move lastMove;
+	public String lastMoveString;
 
 	public final Agent agentWhite;
 	public final Agent agentBlack;
@@ -21,14 +22,16 @@ public final class ChessMatch{
 		Agent currentPlayer = agentWhite;
 		while (true){
 			System.out.println(currentPlayer.name()+" playing");
-			Move move = currentPlayer.findMove(gameState);
+
+			Move move = currentPlayer.findMove(gameState, this);
+			this.lastMoveString = gameState.toAlgebraicMoveNotation(move);
 			gameState.tryMove(move);
-			if (gameState.player == Tile.WHITE){
-				currentPlayer = agentWhite;
-			} else {
-				currentPlayer = agentBlack;
-			}
+			List<Move> captures = new ArrayList<>();
+			moveHandler.addCaptures(captures);
+			System.out.println(captures);
 			this.lastMove = move;
+			currentPlayer.updateDisplay(this);
+
 			if (gameState.halfmoves > 50){
 				winner = 4;
 				break;
@@ -45,7 +48,7 @@ public final class ChessMatch{
 				break;
 			}
 			List<Move> moves = new ArrayList<>();
-			moveHandler.addLegalMoves(moves);
+			moveHandler.addMoves(moves);
 			if (moves.isEmpty()){
 				if (moveHandler.isAttacked(gameState.whiteKingIndex, Tile.BLACK)){
 					winner = Tile.BLACK;
@@ -57,6 +60,12 @@ public final class ChessMatch{
 					winner = 4;
 					break;
 				}
+			}
+
+			if (gameState.player == Tile.WHITE){
+				currentPlayer = agentWhite;
+			} else {
+				currentPlayer = agentBlack;
 			}
 		}
 		System.out.println("game over: "+winner);

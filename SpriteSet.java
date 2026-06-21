@@ -70,7 +70,7 @@ public class SpriteSet{
 	private final BufferedImage[] PIECES;
 
 	public BufferedImage getImage(byte b){
-		if ((b & Tile.PIECE) == Tile.BLANK) return null;
+		if (b == Tile.BLANK) return null;
 		return PIECES[b];
 	}
 	public static BufferedImage loadImage(String filePath){
