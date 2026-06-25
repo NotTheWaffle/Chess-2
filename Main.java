@@ -4,7 +4,7 @@
 
 public class Main{
 	public static void main(String[] args){
-		ChessMatch match = new ChessMatch(new HumanAgent(), new AIAgent(5));
+		ChessMatch match = new ChessMatch(new AIAgent(5, false), new HumanAgent());
 
 		ChessDisplay game = new ChessDisplay(match, false);
 

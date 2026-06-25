@@ -46,7 +46,7 @@ public final class ChessMatch{
 				winner = 4;
 				break;
 			}
-			List<Move> moves = new ArrayList<>();
+			List<Move> moves = new ArrayList<>(40);
 			moveHandler.addMoves(moves);
 			if (moves.isEmpty()){
 				if (moveHandler.isAttacked(gameState.whiteKingIndex, Tile.BLACK)){

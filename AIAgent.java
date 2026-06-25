@@ -8,24 +8,57 @@ public class AIAgent extends Agent {
 	public final int depth;
 	private int prevEval = 0;
 	private final Map<Long, Transposition> transpositionTable;
+	private final boolean quiesce;
 
-	public AIAgent(int depth){
+	public AIAgent(int depth, boolean quiesce){
 		this.depth = depth;
 		this.transpositionTable = new HashMap<>();
+		this.quiesce = quiesce;
 	}
 	@Override
 	public Move findMove(GameState rawGameState, ChessMatch match){
 		long start = System.currentTimeMillis();
+
 		ReversibleGameState gameState = new ReversibleGameState(rawGameState);
 		MoveHandler moveHandler = new MoveHandler(gameState);
-		List<Move> moves = new ArrayList<>();
-		moveHandler.addMoves(moves);
+
 		int best = -2_000_000;
 		Move bestMove = null;
 		int eval = deepEvaluate(moveHandler, gameState, depth);
+
+		// console
 		String change = (eval > prevEval ? "+" : "") + (eval-prevEval);
 		if (match.lastMove != null) System.out.println("They chose "+match.lastMoveString+" : "+eval+" ("+change+")");
-		for (Move move : moves){
+
+
+
+
+		List<Move> moves = new ArrayList<>(40);
+		moveHandler.addMoves(moves);
+
+		int[] indicies = new int[moves.size()];
+		for (int i = 0; i < indicies.length; i++){
+			Move move = moves.get(i);
+			int taken = MATERIAL_VALUE[gameState.getTile(move.getTargetIndex())];
+			int taker = MATERIAL_VALUE[gameState.getTile(move.getOriginIndex())];
+			int tempEval;
+			if (taken > 0){
+				tempEval = 1000+ 10 * taken - taker;
+			} else {
+				tempEval = 0;
+			}
+			tempEval = 1_000_000 - tempEval;
+
+			indicies[i] = (tempEval << 8) | i ;
+		}
+		Arrays.sort(indicies);
+		for (int i = 0; i < indicies.length; i++){
+			indicies[i] = indicies[i] & 0xff;
+		}
+
+
+		for (int i = 0; i < indicies.length; i++){
+			Move move = moves.get(indicies[i]);
 			gameState.tryMove(move);
 			int evaluation = -deepEvaluate(moveHandler, gameState, this.depth);
 			if (evaluation > best){
@@ -44,9 +77,6 @@ public class AIAgent extends Agent {
 		return bestMove;
 	}
 
-	public int quiescentEvaluate(MoveHandler moveHandler, ReversibleGameState gameState){
-		return quiescentEvaluate(moveHandler, gameState, -10_000_000, 10_000_000);
-	}
 	public int quiescentEvaluate(MoveHandler moveHandler, ReversibleGameState gameState, int alpha, int beta){
 		long hash = moveHandler.gameState.getHash();
 		if (transpositionTable.containsKey(hash)){
@@ -54,12 +84,12 @@ public class AIAgent extends Agent {
 			if (depth == -1) return item.eval;
 		}
 
-		List<Move> captures = new ArrayList<>();
+		List<Move> captures = new ArrayList<>(40);
 		moveHandler.addCaptures(captures);
-		if (captures.isEmpty()) return naiveEvaluate(moveHandler);
 		int best = naiveEvaluate(moveHandler);
 		if (best > alpha) alpha = best;
 		if (alpha >= beta) return best;
+		if (captures.isEmpty()) return best;
 
 		// cursed sorting thing again
 		int[] indicies = new int[captures.size()];
@@ -100,7 +130,7 @@ public class AIAgent extends Agent {
 	}
 	public int deepEvaluate(MoveHandler moveHandler, ReversibleGameState gameState, int depth, int alpha, int beta){
 		GameState.Conclusion winner = moveHandler.gameState.findWinner(moveHandler);
-		// this stuff isn't included in the hash so it needs to be handled here.
+		// this stuff isn't included in the hash so it needs to be handled before the cache.
 		switch (winner){
 			case GameState.Conclusion.WHITE -> {
 				if (moveHandler.gameState.player == Tile.WHITE){
@@ -126,9 +156,16 @@ public class AIAgent extends Agent {
 		Transposition item = transpositionTable.get(hash);
 		if (item != null && item.depth >= depth) return item.eval;
 
-		if (depth == 0) return naiveEvaluate(moveHandler);
-		//if (depth == 0) return quiescentEvaluate(moveHandler);
-		List<Move> moves = new ArrayList<>();
+		if (depth == 0){
+			if (quiesce){
+				return quiescentEvaluate(moveHandler, gameState, alpha, beta);
+			} else {
+				return naiveEvaluate(moveHandler);
+			}
+		}
+
+
+		List<Move> moves = new ArrayList<>(40);
 		moveHandler.addMoves(moves);
 		if (moves.isEmpty()) return naiveEvaluate(moveHandler);
 
@@ -137,12 +174,20 @@ public class AIAgent extends Agent {
 		// incredibly cursed nonsense generates a list of indicies into moves ordered by the evaluation of them
 		int[] indicies = new int[moves.size()];
 		for (int i = 0; i < indicies.length; i++){
-			gameState.tryMove(moves.get(i));
-			// this naiveEval is giving the opps eval, meaning lower = better. this is good because lower = lower idx when sorted
-			int eval = naiveEvaluate(moveHandler) + 1_000_000; // shifts and fixes twos complement nonsense
-			gameState.untryMove();
-			indicies[i] = (eval << 8) | i ;
+			Move move = moves.get(i);
+			int taken = MATERIAL_VALUE[gameState.getTile(move.getTargetIndex())];
+			int taker = MATERIAL_VALUE[gameState.getTile(move.getOriginIndex())];
+			int tempEval;
+			if (taken > 0){
+				tempEval = 1000+ 10 * taken - taker;
+			} else {
+				tempEval = 0;
+			}
+			tempEval = 1_000_000 - tempEval;
+
+			indicies[i] = (tempEval << 8) | i ;
 		}
+
 		Arrays.sort(indicies);
 		for (int i = 0; i < indicies.length; i++){
 			indicies[i] = indicies[i] & 0xff;
@@ -170,8 +215,11 @@ public class AIAgent extends Agent {
 		transpositionTable.put(hash, new Transposition(hash, best, depth));
 		return best;
 	}
+	public static final int MATERIAL_WEIGHT = 10;
+	public static final int LOCATION_WEIGHT = 7;
+
+
 	public int naiveEvaluate(MoveHandler moveHandler){
-		//TODO include 50 move rule and threefold repetition
 		GameState.Conclusion winner = moveHandler.gameState.findWinner(moveHandler);
 		switch (winner){
 			case GameState.Conclusion.WHITE -> {
@@ -211,7 +259,6 @@ public class AIAgent extends Agent {
 	public String name(){
 		return "AI Agent";
 	}
-
 	private static final int[] BLACK_PAWN = {0, 0, 0, 0, 0, 0, 0, 0, 50, 50, 50, 50, 50, 50, 50, 50, 10, 10, 20, 30, 30, 20, 10, 10, 5, 5, 10, 25, 25, 10, 5, 5, 0, 0, 0, 20, 20, 0, 0, 0, 5, -5, -10, 0, 0, -10, -5, 5, 5, 10, 10, -20, -20, 10, 10, 5, 0, 0, 0, 0, 0, 0, 0, 0};
 	private static final int[] BLACK_ROOK = {0, 0, 0, 0, 0, 0, 0, 0, 5, 10, 10, 10, 10, 10, 10, 5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, 0, 0, 0, 5, 5, 0, 0, 0};
 	private static final int[] BLACK_KNIGHT = {-50, -40, -30, -30, -30, -30, -40, -50, -40, -20, 0, 0, 0, 0, -20, -40, -30, 0, 10, 15, 15, 10, 0, -30, -30, 5, 15, 20, 20, 15, 5, -30, -30, 0, 15, 20, 20, 15, 0, -30, -30, 5, 10, 15, 15, 10, 5, -30, -40, -20, 0, 5, 5, 0, -20, -40, -50, -40, -30, -30, -30, -30, -40, -50};

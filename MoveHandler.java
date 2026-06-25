@@ -510,12 +510,12 @@ public class MoveHandler {
 		return false;
 	}
 	/**
-	 * Finds the piece of a certain color of the least value which attacks the index specified
+	 * Finds the piece of a certain color of the least value which attacks the index specified. Doesn't support en passant.
 	 * @param index specified index attacked
 	 * @param byColor color of attacker
 	 * @return a correspondent {@code Tile.PIECE} (or {@code Tile.BLANK} if there are no attackers)
 	 */
-	public byte cheapestAttacker(int index, int byColor){
+	public byte leastMaterialAttacker(int index, int byColor){
 		byte targetTile;
 		int x = index & 0b111;
 		int y = index >> 3;
@@ -525,7 +525,7 @@ public class MoveHandler {
 
 
 
-		// pawn check TODO en passant now matters :(
+		// pawn check
 		dy = 1 + y - byColor/4; // subtract 1 if white, add 1 if black
 		if (dy >= 0 && dy < 8){
 			threat = (byte)(Tile.PAWN|byColor);
@@ -629,6 +629,7 @@ public class MoveHandler {
 			break;
 		}
 
+		threat = (byte)(Tile.QUEEN|byColor);
 		// queen checks
 		for (dx = x+1; dx < 8; dx++){
 			targetTile = gameState.getTile(dx, y);
@@ -654,9 +655,7 @@ public class MoveHandler {
 			if (targetTile == threat) return threat;
 			break;
 		}
-		// bishop/queen checks
 		int d;
-		threat = (byte)(Tile.BISHOP|byColor);
 		// northeast
 		for (d = 1; x+d < 8 && y+d < 8; d++){
 			targetTile = gameState.getTile(x+d, y+d);
@@ -684,6 +683,35 @@ public class MoveHandler {
 			if (targetTile == Tile.BLANK) continue;
 			if (targetTile == threat) return threat;
 			break;
+		}
+
+		threat = (byte)(Tile.KING|byColor);
+
+		dy = y-1;
+		if (dy >= 0){
+			dx = x-1;
+			if (dx >= 0 && gameState.getTile(dx, dy) == threat) return threat;
+			dx = x;
+			if (gameState.getTile(dx, dy) == threat) return threat;
+			dx = x+1;
+			if (dx < 8 && gameState.getTile(dx, dy) == threat) return threat;
+		} else {
+			dx = x+1;
+		}
+
+		dy = y;
+		// don't check the center square
+		if (dx < 8 && gameState.getTile(dx, dy) == threat) return threat;
+		dx = x-1;
+		if (dx >= 0 && gameState.getTile(dx, dy) == threat) return threat;
+
+		dy = y+1;
+		if (dy < 8){
+			if (dx >= 0 && dy < 8 && gameState.getTile(dx, dy) == threat) return threat;
+			dx = x;
+			if (gameState.getTile(dx, dy) == threat) return threat;
+			dx = x+1;
+			if (dx < 8 && dy < 8 && gameState.getTile(dx, dy) == threat) return threat;
 		}
 
 
