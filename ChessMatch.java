@@ -2,8 +2,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class ChessMatch{
-	public final MoveHandler moveHandler;
-	public final ReversibleGameState gameState;
+	private final MoveHandler moveHandler;
+	public final GameState gameState;
 	public Move lastMove;
 	public String lastMoveString;
 
@@ -12,7 +12,7 @@ public final class ChessMatch{
 	public byte winner;
 
 	public ChessMatch(Agent agentWhite, Agent agentBlack){
-		gameState = new ReversibleGameState();
+		gameState = new GameState();
 		moveHandler = new MoveHandler(gameState);
 		this.agentWhite = agentWhite;
 		this.agentBlack = agentBlack;
@@ -21,15 +21,14 @@ public final class ChessMatch{
 	public void play(){
 		Agent currentPlayer = agentWhite;
 		while (true){
-			System.out.println(currentPlayer.name()+" playing");
+			System.out.println(currentPlayer.name() + " playing");
 
 			Move move = currentPlayer.findMove(gameState, this);
-			this.lastMoveString = gameState.toAlgebraicMoveNotation(move);
-			gameState.tryMove(move);
-			List<Move> captures = new ArrayList<>();
-			moveHandler.addCaptures(captures);
-			System.out.println(captures);
 			this.lastMove = move;
+			this.lastMoveString = gameState.toAlgebraicMoveNotation(lastMove);
+
+			gameState.makeMove(move);
+
 			currentPlayer.updateDisplay(this);
 
 			if (gameState.halfmoves > 50){
@@ -61,13 +60,19 @@ public final class ChessMatch{
 					break;
 				}
 			}
-
 			if (gameState.player == Tile.WHITE){
 				currentPlayer = agentWhite;
 			} else {
 				currentPlayer = agentBlack;
 			}
 		}
-		System.out.println("game over: "+winner);
+
+		if (winner == Tile.BLACK){
+			System.out.println("Game over: White was Checkmated");
+		} else if (winner == Tile.WHITE){
+			System.out.println("Game over: Black was Checkmated");
+		} else {
+			System.out.println("Game over: Stalemate");
+		}
 	}
 }

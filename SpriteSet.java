@@ -75,7 +75,7 @@ public class SpriteSet{
 	}
 	public static BufferedImage loadImage(String filePath){
 		BufferedImage image = null;
-		try {image = ImageIO.read(new File("Assets/"+filePath));} catch (IOException e) {System.out.println("failed to load "+filePath);}
+		try {image = ImageIO.read(new File("Assets/"+filePath));} catch (IOException e) {System.out.println("Failed to load "+filePath);}
 		return image;
 	}
 }

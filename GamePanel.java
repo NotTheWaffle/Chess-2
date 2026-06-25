@@ -24,8 +24,8 @@ public class GamePanel extends JPanel{
 			@Override
 			public void mouseReleased(final MouseEvent e) {
 				updateMousePosition(e);
-				input.mouseDown &= ~(1<<(e.getButton()-1));
 				game.onMouseUp(GamePanel.this);
+				input.mouseDown &= ~(1<<(e.getButton()-1));
 			}
 			@Override
 			public void mousePressed(final MouseEvent e) {

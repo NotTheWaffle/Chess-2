@@ -7,6 +7,10 @@ public class ReversibleGameState extends GameState{
 		this.moveHistory = new ArrayList<>();
 		super();
 	}
+	public ReversibleGameState(GameState gameState){
+		super(gameState);
+		this.moveHistory = new ArrayList<>();
+	}
 	public ReversibleGameState(ReversibleGameState gameState){
 		super(gameState);
 		this.moveHistory = new ArrayList<>();

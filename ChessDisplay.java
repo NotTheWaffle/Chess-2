@@ -8,13 +8,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class ChessDisplay extends Game{
-	private final SpriteSet sprites;
+	private final static SpriteSet sprites = new SpriteSet("Gambit", "Gambit");
 	// game stuff
 	private final ChessMatch match;
-	private final ReversibleGameState gameState;
+	private final GameState gameState;
 	private final MoveHandler moveHandler;
-	private final Agent playerWhite;
-	private final Agent playerBlack;
 
 	private boolean cursor = false;
 	private boolean grabbing = false;
@@ -33,10 +31,10 @@ public final class ChessDisplay extends Game{
 
 	public ChessDisplay(ChessMatch match, boolean rotate){
 		super(288, 288);
-		sprites = new SpriteSet("Gambit", "Gambit");
+
 		this.match = match;
-		this.moveHandler = match.moveHandler;
-		gameState = new ReversibleGameState(match.gameState);
+		this.moveHandler = new MoveHandler(match.gameState);
+		this.gameState = match.gameState;
 		this.selectedIndex = -1;
 
 		renderedMoves = new ArrayList<>();
@@ -45,8 +43,6 @@ public final class ChessDisplay extends Game{
 		promotions = new ArrayList<>();
 		lastMove = null;
 
-		playerWhite = match.agentWhite;
-		playerBlack = match.agentBlack;
 		match.agentWhite.display = this;
 		match.agentBlack.display = this;
 		this.rotate = rotate;
@@ -55,12 +51,9 @@ public final class ChessDisplay extends Game{
 	public void tick(){}
 	@Override
 	public void onMouseDown(GamePanel panel){
-		if (input.mouseDown == Input.MOUSE_RIGHT){
-			return;
-		}
 		if (input.mouseDown != Input.MOUSE_LEFT) return;
 		if (chosenMove != null) return;
-		// de-select a piece when you mousedown on a different index OR when you click on it again and let go in its position
+		// de-select a piece when you mousedown on a different index
 		int tileX = inverseTransformX(input.mouseX);
 		int tileY = inverseTransformY(input.mouseY);
 
@@ -129,6 +122,7 @@ public final class ChessDisplay extends Game{
 	}
 	@Override
 	public void onMouseUp(GamePanel panel){
+		if (input.mouseDown != Input.MOUSE_LEFT) return;
 		if (chosenMove != null) return;
 		this.grabbing = false;
 
@@ -185,8 +179,6 @@ public final class ChessDisplay extends Game{
 		if (cursor) render();
 	}
 	public Move findMove(){
-		lastMove = match.lastMove;
-
 		while (chosenMove == null){
 			// fast and slow enough to not cause performance issues but also not cause input lag
 			try {
@@ -196,14 +188,12 @@ public final class ChessDisplay extends Game{
 				e.printStackTrace();
 			}
 		}
-
-		// preempt the move so that the display can show it
-		lastMove = chosenMove;
+		Move move = chosenMove;
 		chosenMove = null;
-		return lastMove;
+		return move;
 	}
 	public void update(ChessMatch match){
-		gameState.makeMove(match.lastMove);
+		lastMove = match.lastMove;
 		render();
 	}
 	public void render(){

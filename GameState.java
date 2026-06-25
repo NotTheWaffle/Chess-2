@@ -32,14 +32,16 @@ public class GameState{
 		for (int i = 0; i < result.length; i++){
 			for (int j = i+1; j < result.length; j++){
 				if (result[i] == result[j]){
-					System.out.println(i+" equals "+j+" (very bad)");
+					System.out.println("Hash collision. Please Restart");
+					System.exit(0);
 				}
 				if ((int) result[i] == (int) result[j]){
-					System.out.println(i+" is close enoguh to "+j+"(still pretty bad");
+					System.out.println("Hash collision. Please Restart");
+					System.exit(0);
 				}
 			}
 		}
-		System.out.println("valid hashing values");
+		System.out.println("Zobrist Hashing values generated");
 		return result;
 	}
 	public long getHash(){
@@ -167,7 +169,7 @@ public class GameState{
 
 	public void makeMove(Move move){
 		if (move == null) throw new InvalidParameterException("Move must not be null");
-		this.hash = -1; // invalid the hash cache
+		this.hash = -1; // invalidate the hash cache TODO replace with smarter zobrist hashing
 		this.halfmoves++;
 		// its assumed the move is legal, checking would take too long
 		if (move.getOriginIndex() == 0 || move.getTargetIndex() == 0) castlingRights &= 0b1101;		//white queenside rook
@@ -194,9 +196,9 @@ public class GameState{
 				int d = 8 - 2 * this.player; // works because white = 8, black = 0
 				// white = -8
 				// black = 8
-				if (getTile(move.getTargetIndex()-1) == ((Tile.PAWN|this.player)^Tile.COLOR)){
+				if (getTile(move.getTargetIndex()-1) == ((Tile.PAWN | this.player)^Tile.COLOR)){
 					enpassantIndex = (byte) (move.getTargetIndex() + d);
-				} else if (getTile(move.getTargetIndex()+1) == ((Tile.PAWN|this.player)^Tile.COLOR)){
+				} else if (getTile(move.getTargetIndex()+1) == ((Tile.PAWN | this.player)^Tile.COLOR)){
 					enpassantIndex = (byte) (move.getTargetIndex() + d);
 				}
 			} else if (flag == Move.ENPASSANT){
@@ -244,7 +246,7 @@ public class GameState{
 		TIE,
 		ONGOING
 	}
-	public Conclusion findWinner(){
+	public Conclusion findWinner(MoveHandler moveHandler){
 		if (this.halfmoves > 50){
 			return Conclusion.TIE;
 		}
@@ -258,7 +260,6 @@ public class GameState{
 		if (repetition >= 3){
 			return Conclusion.TIE;
 		}
-		MoveHandler moveHandler = new MoveHandler((ReversibleGameState) this);
 
 		if (!moveHandler.moveExists()){
 			if (moveHandler.isAttacked(whiteKingIndex, Tile.BLACK)){

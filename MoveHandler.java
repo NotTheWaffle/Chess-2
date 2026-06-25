@@ -1,40 +1,26 @@
 
 import java.util.List;
-
+/**
+ * A collection of functions which handle the generation and legalization of moves with an associated {@code GameState}
+ */
 public class MoveHandler {
-	public final ReversibleGameState gameState;
-	public MoveHandler(ReversibleGameState gameState){
+	/**
+	 * The {@code GameState} all moves will be handled upon
+	 */
+	public final GameState gameState;
+
+	/**
+	 * Generates a {@code MoveHandler} with an associated {@code GameState}
+	 * @param gameState
+	 */
+	public MoveHandler(GameState gameState){
 		this.gameState = gameState;
 	}
-	public boolean moveExists(){
-		for (int originIndex = 0; originIndex < 64; originIndex++){
-			byte piece = gameState.getTile(originIndex);
-			if (piece == Tile.BLANK) continue;
-			int pieceColor = piece & Tile.COLOR;
-			if (pieceColor != gameState.player) continue;
-			if (moveExists(originIndex)) return true;
-		}
-		return false;
-	}
-	public boolean moveExists(int index){
-		byte piece = gameState.getTile(index);
 
-		int pieceType = piece & Tile.PIECE;
-		int pieceColor = piece & Tile.COLOR;
-
-		if (pieceType == Tile.BLANK) return false;
-		if (pieceColor != gameState.player) return false;
-
-		return switch (pieceType){
-			case Tile.PAWN -> pawnMoveExists(index);
-			case Tile.KNIGHT -> knightMoveExists(index);
-			case Tile.BISHOP -> bishopMoveExists(index);
-			case Tile.ROOK -> rookMoveExists(index);
-			case Tile.QUEEN -> queenMoveExists(index);
-			case Tile.KING -> kingMoveExists(index);
-			default -> false;
-		};
-	}
+	/**
+	 * Adds all the semilegal moves in the gamestate associated with this {@code MoveHandler}
+	 * @param moves list the available moves will be added to
+	 */
 	public void addMoves(List<Move> moves){
 		for (int originIndex = 0; originIndex < 64; originIndex++){
 			byte piece = gameState.getTile(originIndex);
@@ -45,8 +31,13 @@ public class MoveHandler {
 		}
 		legalizeMoves(moves);
 	}
-	public void addMoves(int originIndex, List<Move> moves){
-		byte piece = gameState.getTile(originIndex);
+	/**
+	 * Adds all the semilegal moves originated from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which moves originate from
+	 * @param moves list the available moves will be added to
+	 */
+	public void addMoves(int index, List<Move> moves){
+		byte piece = gameState.getTile(index);
 
 		int pieceType = piece & Tile.PIECE;
 		int pieceColor = piece & Tile.COLOR;
@@ -55,14 +46,18 @@ public class MoveHandler {
 		if (pieceColor != gameState.player) return;
 
 		switch (pieceType){
-			case Tile.PAWN -> addPawnMoves(originIndex, moves);
-			case Tile.KNIGHT -> addKnightMoves(originIndex, moves);
-			case Tile.BISHOP -> addBishopMoves(originIndex, moves);
-			case Tile.ROOK -> addRookMoves(originIndex, moves);
-			case Tile.QUEEN -> addQueenMoves(originIndex, moves);
-			case Tile.KING -> addKingMoves(originIndex, moves);
+			case Tile.PAWN -> addPawnMoves(index, moves);
+			case Tile.KNIGHT -> addKnightMoves(index, moves);
+			case Tile.BISHOP -> addBishopMoves(index, moves);
+			case Tile.ROOK -> addRookMoves(index, moves);
+			case Tile.QUEEN -> addQueenMoves(index, moves);
+			case Tile.KING -> addKingMoves(index, moves);
 		}
 	}
+	/**
+	 * Removes any moves which put yourself in check from the list
+	 * @param moves list the illegal moves will be removed from
+	 */
 	public void legalizeMoves(List<Move> moves){
 		int kingIndex = (gameState.player == Tile.WHITE) ? gameState.whiteKingIndex : gameState.blackKingIndex;
 		for (int i = 0; i < moves.size(); i++){
@@ -72,9 +67,20 @@ public class MoveHandler {
 			}
 		}
 	}
+	/**
+	 * Tests whether your king is in check after making this move
+	 * @param move move to test
+	 * @return whether your king isn't/is in check after this move
+	 */
 	public boolean isLegal(Move move){
 		return isLegal(move, (gameState.player == Tile.WHITE) ? gameState.whiteKingIndex : gameState.blackKingIndex);
 	}
+	/**
+	 * Tests whether your king is in check after making this move
+	 * @param move move to test
+	 * @param kingIndex the index of your king before this move
+	 * @return whether your king isn't/is in check after this move
+	 */
 	public boolean isLegal(Move move, int kingIndex){
 		boolean legal = true;
 		byte origin = gameState.getTile(move.getOriginIndex());
@@ -101,35 +107,11 @@ public class MoveHandler {
 		return legal;
 	}
 
-	public void addCaptures(List<Move> moves){
-		for (int originIndex = 0; originIndex < 64; originIndex++){
-			byte piece = gameState.getTile(originIndex);
-			if (piece == Tile.BLANK) continue;
-			int pieceColor = piece & Tile.COLOR;
-			if (pieceColor != gameState.player) continue;
-			addCaptures(originIndex, moves);
-		}
-		legalizeMoves(moves);
-	}
-	public void addCaptures(int originIndex, List<Move> moves){
-		byte piece = gameState.getTile(originIndex);
-
-		int pieceType = piece & Tile.PIECE;
-		int pieceColor = piece & Tile.COLOR;
-
-		if (pieceType == Tile.BLANK) return;
-		if (pieceColor != gameState.player) return;
-
-		switch (pieceType){
-			case Tile.PAWN -> addPawnCaptures(originIndex, moves);
-			case Tile.KNIGHT -> addKnightCaptures(originIndex, moves);
-			case Tile.BISHOP -> addBishopCaptures(originIndex, moves);
-			case Tile.ROOK -> addRookCaptures(originIndex, moves);
-			case Tile.QUEEN -> addQueenCaptures(originIndex, moves);
-			case Tile.KING -> addKingCaptures(originIndex, moves);
-		}
-	}
-
+	/**
+	 * Adds all the semilegal moves a pawn could make originated from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which moves originate from
+	 * @param moves list the avilable moves will be added to
+	 */
 	public void addPawnMoves(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
@@ -188,6 +170,11 @@ public class MoveHandler {
 			}
 		}
 	}
+	/**
+	 * Adds all the semilegal moves a knight could make originated from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which moves originate from
+	 * @param moves list the avilable moves will be added to
+	 */
 	public void addKnightMoves(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
@@ -216,6 +203,11 @@ public class MoveHandler {
 			}
 		}
 	}
+	/**
+	 * Adds all the semilegal moves a bishop could make originated from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which moves originate from
+	 * @param moves list the avilable moves will be added to
+	 */
 	public void addBishopMoves(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
@@ -262,6 +254,11 @@ public class MoveHandler {
 			break;
 		}
 	}
+	/**
+	 * Adds all the semilegal moves a rook could make originated from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which moves originate from
+	 * @param moves list the avilable moves will be added to
+	 */
 	public void addRookMoves(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
@@ -308,10 +305,20 @@ public class MoveHandler {
 			break;
 		}
 	}
+	/**
+	 * Adds all the semilegal moves a queen could make originated from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which moves originate from
+	 * @param moves list the avilable moves will be added to
+	 */
 	public void addQueenMoves(int index, List<Move> moves){
 		addRookMoves(index, moves);
 		addBishopMoves(index, moves);
 	}
+	/**
+	 * Adds all the semilegal moves a king could make originated from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which moves originate from
+	 * @param moves list the avilable moves will be added to
+	 */
 	public void addKingMoves(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
@@ -350,7 +357,14 @@ public class MoveHandler {
 		}
 	}
 
+	/**
+	 * Checks to find whether the specified index is attacked by any piece of a specified color. Only guarenteed to work when a king is at the specified index
+	 * @param index position whose safety is check
+	 * @param byColor the color which is attacking
+	 * @return whether or not the piece is attacked
+	 */
 	public boolean isAttacked(int index, int byColor){
+		// TODO make better
 		// only intended to check for king, ignore en passant captures
 		byte targetTile;
 		int x = index & 0b111;
@@ -495,7 +509,230 @@ public class MoveHandler {
 		}
 		return false;
 	}
+	/**
+	 * Finds the piece of a certain color of the least value which attacks the index specified
+	 * @param index specified index attacked
+	 * @param byColor color of attacker
+	 * @return a correspondent {@code Tile.PIECE} (or {@code Tile.BLANK} if there are no attackers)
+	 */
+	public byte cheapestAttacker(int index, int byColor){
+		byte targetTile;
+		int x = index & 0b111;
+		int y = index >> 3;
+		// rook/queen checks
+		byte threat;
+		int dx, dy;
 
+
+
+		// pawn check TODO en passant now matters :(
+		dy = 1 + y - byColor/4; // subtract 1 if white, add 1 if black
+		if (dy >= 0 && dy < 8){
+			threat = (byte)(Tile.PAWN|byColor);
+			if (x < 7 && gameState.getTile(x+1, dy) == threat){
+				return threat;
+			}
+			if (x > 0 && gameState.getTile(x-1, dy) == threat){
+				return threat;
+			}
+		}
+
+		// knight checks
+		threat = (byte)(Tile.KNIGHT|byColor);
+		dx = x-1; dy = y-2;
+		if (dy >= 0){
+			if (dx >= 0 && gameState.getTile(dx, dy) == threat) return threat;
+			dx = x+1;
+			if (dx < 8 && gameState.getTile(dx, dy) == threat) return threat;
+		} else {
+			dx = x+1;
+		}
+		dy = y+2;
+		if (dy < 8){
+			if (dx < 8 && gameState.getTile(dx, dy) == threat) return threat;
+			dx = x-1;
+			if (dx >= 0 && gameState.getTile(dx, dy) == threat) return threat;
+		}
+
+		dx = x-2;
+		dy = y-1;
+		if (dy >= 0){
+			if (dx >= 0 && gameState.getTile(dx, dy) == threat) return threat;
+			dx = x+2;
+			if (dx < 8 && gameState.getTile(dx, dy) == threat) return threat;
+		} else {
+			dx = x+2;
+		}
+		dy = y+1;
+		if (dy < 8){
+			if (dx < 8 && gameState.getTile(dx, dy) == threat) return threat;
+			dx = x-2;
+			if (dx >= 0 && gameState.getTile(dx, dy) == threat) return threat;
+		}
+
+
+		// bishop checks
+		threat = (byte)(Tile.BISHOP|byColor);
+		// northeast
+		for (int d = 1; x+d < 8 && y+d < 8; d++){
+			targetTile = gameState.getTile(x+d, y+d);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+		// northwest
+		for (int d = 1; x-d >= 0 && y+d < 8; d++){
+			targetTile = gameState.getTile(x-d, y+d);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+		// southeast
+		for (int d = 1; x+d < 8 && y-d >= 0; d++){
+			targetTile = gameState.getTile(x+d, y-d);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+		// southwest
+		for (int d = 1; x-d >= 0 && y-d >= 0; d++){
+			targetTile = gameState.getTile(x-d, y-d);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+
+		// rook checks
+		threat = (byte)(Tile.ROOK|byColor);
+		for (dx = x+1; dx < 8; dx++){
+			targetTile = gameState.getTile(dx, y);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+		for (dx = x-1; dx >= 0; dx--){
+			targetTile = gameState.getTile(dx, y);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+		for (dy = y+1; dy < 8; dy++){
+			targetTile = gameState.getTile(x, dy);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+		for (dy = y-1; dy >= 0; dy--){
+			targetTile = gameState.getTile(x, dy);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+
+		// queen checks
+		for (dx = x+1; dx < 8; dx++){
+			targetTile = gameState.getTile(dx, y);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+		for (dx = x-1; dx >= 0; dx--){
+			targetTile = gameState.getTile(dx, y);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+		for (dy = y+1; dy < 8; dy++){
+			targetTile = gameState.getTile(x, dy);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+		for (dy = y-1; dy >= 0; dy--){
+			targetTile = gameState.getTile(x, dy);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+		// bishop/queen checks
+		int d;
+		threat = (byte)(Tile.BISHOP|byColor);
+		// northeast
+		for (d = 1; x+d < 8 && y+d < 8; d++){
+			targetTile = gameState.getTile(x+d, y+d);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+		// northwest
+		for (d = 1; x-d >= 0 && y+d < 8; d++){
+			targetTile = gameState.getTile(x-d, y+d);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+		// southeast
+		for (d = 1; x+d < 8 && y-d >= 0; d++){
+			targetTile = gameState.getTile(x+d, y-d);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+		// southwest
+		for (d = 1; x-d >= 0 && y-d >= 0; d++){
+			targetTile = gameState.getTile(x-d, y-d);
+			if (targetTile == Tile.BLANK) continue;
+			if (targetTile == threat) return threat;
+			break;
+		}
+
+
+		return Tile.BLANK;
+	}
+
+	/**
+	 * Adds all the semilegal captures in the gamestate associated with this {@code MoveHandler}
+	 * @param moves list the available captures will be added to
+	 */
+	public void addCaptures(List<Move> moves){
+		for (int originIndex = 0; originIndex < 64; originIndex++){
+			byte piece = gameState.getTile(originIndex);
+			if (piece == Tile.BLANK) continue;
+			int pieceColor = piece & Tile.COLOR;
+			if (pieceColor != gameState.player) continue;
+			addCaptures(originIndex, moves);
+		}
+		legalizeMoves(moves);
+	}
+	/**
+	 * Adds all the semilegal captures originated from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which captures originate from
+	 * @param moves list the available captures will be added to
+	 */
+	public void addCaptures(int index, List<Move> moves){
+		byte piece = gameState.getTile(index);
+
+		int pieceType = piece & Tile.PIECE;
+		int pieceColor = piece & Tile.COLOR;
+
+		if (pieceType == Tile.BLANK) return;
+		if (pieceColor != gameState.player) return;
+
+		switch (pieceType){
+			case Tile.PAWN -> addPawnCaptures(index, moves);
+			case Tile.KNIGHT -> addKnightCaptures(index, moves);
+			case Tile.BISHOP -> addBishopCaptures(index, moves);
+			case Tile.ROOK -> addRookCaptures(index, moves);
+			case Tile.QUEEN -> addQueenCaptures(index, moves);
+			case Tile.KING -> addKingCaptures(index, moves);
+		}
+	}
+
+	/**
+	 * Adds all the semilegal captures a pawn could make originated from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which captures originate from
+	 * @param moves list the avilable captures will be added to
+	 */
 	public void addPawnCaptures(int index, List<Move> moves){
 		int color = gameState.getTile(index) & Tile.COLOR;
 		int x = index & 0b111;
@@ -522,6 +759,11 @@ public class MoveHandler {
 			}
 		}
 	}
+	/**
+	 * Adds all the semilegal captures a knight could make originated from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which captures originate from
+	 * @param moves list the avilable captures will be added to
+	 */
 	public void addKnightCaptures(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
@@ -550,6 +792,11 @@ public class MoveHandler {
 			}
 		}
 	}
+	/**
+	 * Adds all the semilegal captures a bishop could make originated from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which captures originate from
+	 * @param moves list the avilable captures will be added to
+	 */
 	public void addBishopCaptures(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
@@ -584,6 +831,11 @@ public class MoveHandler {
 			break;
 		}
 	}
+	/**
+	 * Adds all the semilegal captures a rook could make originated from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which captures originate from
+	 * @param moves list the avilable captures will be added to
+	 */
 	public void addRookCaptures(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
@@ -618,10 +870,20 @@ public class MoveHandler {
 			break;
 		}
 	}
+	/**
+	 * Adds all the semilegal captures a queen could make originated from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which captures originate from
+	 * @param moves list the avilable captures will be added to
+	 */
 	public void addQueenCaptures(int index, List<Move> moves){
 		addBishopCaptures(index, moves);
 		addRookCaptures(index, moves);
 	}
+	/**
+	 * Adds all the semilegal captures a king could make originated from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which captures originate from
+	 * @param moves list the avilable captures will be added to
+	 */
 	public void addKingCaptures(int index, List<Move> moves){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
@@ -640,23 +902,49 @@ public class MoveHandler {
 		}
 	}
 
-	private boolean canMoveTo(int x1, int y1, int x2, int y2, byte opColor){
-		//CANNOT BE USED FOR CASTLING, EN PASSANT
-		byte target = gameState.getTile(x2, y2);
-		if (target != Tile.BLANK && (target & Tile.COLOR) != opColor) return false;
-
-		byte origin = gameState.getTile(x1, y1);
-
-		gameState.setTile(x2, y2, origin);
-		gameState.setTile(x1, y1, Tile.BLANK);
-
-		int tkingIndex = ((origin & Tile.PIECE) == Tile.KING) ? ((y2<<3)|x2) : ((gameState.player == Tile.WHITE) ? gameState.whiteKingIndex : gameState.blackKingIndex);
-		boolean legal = !isAttacked(tkingIndex, gameState.player ^ Tile.COLOR);
-
-		gameState.setTile(x1, y1, origin);
-		gameState.setTile(x2, y2, target);
-		return legal;
+	/**
+	 * Checks if any legal moves exist in the gamestate associated with this {@code MoveHandler}
+	 * @return true if a legal move exists, false otherwise
+	 */
+	public boolean moveExists(){
+		for (int originIndex = 0; originIndex < 64; originIndex++){
+			byte piece = gameState.getTile(originIndex);
+			if (piece == Tile.BLANK) continue;
+			if ((piece & Tile.COLOR) != gameState.player) continue;
+			if (moveExists(originIndex)) return true;
+		}
+		return false;
 	}
+	/**
+	 * Checks if any legal moves originating from the designated index exist in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which moves originate from
+	 * @return true if a legal move exists, false otherwise
+	 */
+	public boolean moveExists(int index){
+		byte piece = gameState.getTile(index);
+
+		int pieceType = piece & Tile.PIECE;
+		int pieceColor = piece & Tile.COLOR;
+
+		if (pieceType == Tile.BLANK) return false;
+		if (pieceColor != gameState.player) return false;
+
+		return switch (pieceType){
+			case Tile.PAWN -> pawnMoveExists(index);
+			case Tile.KNIGHT -> knightMoveExists(index);
+			case Tile.BISHOP -> bishopMoveExists(index);
+			case Tile.ROOK -> rookMoveExists(index);
+			case Tile.QUEEN -> queenMoveExists(index);
+			case Tile.KING -> kingMoveExists(index);
+			default -> false;
+		};
+	}
+
+	/**
+	 * Checks if any legal moves a pawn could make originating from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which moves originate from
+	 * @return true if a legal move exists, false otherwise
+	 */
 	public boolean pawnMoveExists(int index){
 		byte targetTile;
 		int color = gameState.getTile(index) & Tile.COLOR;
@@ -696,6 +984,11 @@ public class MoveHandler {
 		}
 		return false;
 	}
+	/**
+	 * Checks if any legal moves a knight could make originating from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which moves originate from
+	 * @return true if a legal move exists, false otherwise
+	 */
 	public boolean knightMoveExists(int index){
 		byte color = (byte) (gameState.getTile(index) & Tile.COLOR);
 		byte opColor = (byte) (color ^ Tile.COLOR);
@@ -736,6 +1029,11 @@ public class MoveHandler {
 		}
 		return false;
 	}
+	/**
+	 * Checks if any legal moves a bishop could make originating from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which moves originate from
+	 * @return true if a legal move exists, false otherwise
+	 */
 	public boolean bishopMoveExists(int index){
 		int color = gameState.getTile(index) & Tile.COLOR;
 		byte opColor = (byte) (color ^ Tile.COLOR);
@@ -763,6 +1061,11 @@ public class MoveHandler {
 		}
 		return false;
 	}
+	/**
+	 * Checks if any legal moves a rook could make originating from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which moves originate from
+	 * @return true if a legal move exists, false otherwise
+	 */
 	public boolean rookMoveExists(int index){
 		int color = gameState.getTile(index) & Tile.COLOR;
 		byte opColor = (byte) (color ^ Tile.COLOR);
@@ -790,10 +1093,20 @@ public class MoveHandler {
 		}
 		return false;
 	}
+	/**
+	 * Checks if any legal moves a queen could make originating from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which moves originate from
+	 * @return true if a legal move exists, false otherwise
+	 */
 	public boolean queenMoveExists(int index){
 		if (rookMoveExists(index)) return true;
 		return bishopMoveExists(index);
 	}
+	/**
+	 * Checks if any legal moves a king could make originating from the designated index in the gamestate associated with this {@code MoveHandler}
+	 * @param index position which moves originate from
+	 * @return true if a legal move exists, false otherwise
+	 */
 	public boolean kingMoveExists(int index){
 		byte color = (byte) (gameState.getTile(index) & Tile.COLOR);
 		byte opColor = (byte) (color ^ Tile.COLOR);
@@ -869,5 +1182,33 @@ public class MoveHandler {
 
 
 		return false;
+	}
+
+	/**
+	 * Checks whether a move can be made from (x1, y1) to (x2, y2) in the gamestate associated with this {@code MoveHandler}. Doesn't support en passant or castling
+	 * @param x1 origin x
+	 * @param y1 origin y
+	 * @param x2 destination x
+	 * @param y2 destination y
+	 * @param opColor opponents color
+	 * @return true if a move can be made from (x1, y1) to (x2, y2), false otherwise
+	 */
+	private boolean canMoveTo(int x1, int y1, int x2, int y2, byte opColor){
+		//CANNOT BE USED FOR CASTLING, EN PASSANT
+		byte target = gameState.getTile(x2, y2);
+		// semilegal check
+		if (target != Tile.BLANK && (target & Tile.COLOR) != opColor) return false;
+
+		byte origin = gameState.getTile(x1, y1);
+
+		gameState.setTile(x2, y2, origin);
+		gameState.setTile(x1, y1, Tile.BLANK);
+
+		int tkingIndex = ((origin & Tile.PIECE) == Tile.KING) ? ((y2<<3)|x2) : ((gameState.player == Tile.WHITE) ? gameState.whiteKingIndex : gameState.blackKingIndex);
+		boolean legal = !isAttacked(tkingIndex, gameState.player ^ Tile.COLOR);
+
+		gameState.setTile(x1, y1, origin);
+		gameState.setTile(x2, y2, target);
+		return legal;
 	}
 }
